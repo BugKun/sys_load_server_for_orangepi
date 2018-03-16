@@ -1,0 +1,32 @@
+<!doctype html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>cpu和内存使用监控</title>
+    <link rel="stylesheet" href="/style.css">
+    <script src="/js/socket.io.js"></script>
+    <script src="/js/echarts.min.js"></script>
+</head>
+<body>
+<div id="main"></div>
+<div id="login">
+    <div class="container">
+        <div class="login-header">
+            <h2>CPU和内存使用监控</h2>
+            <hr>
+        </div>
+        <div class="login-body">
+            <label style="margin-right: 2em;" for="Token">Token</label><input type="password" id="Token">
+        </div>
+        <div class="login-footer">
+            <button class="login-footer-btn" id="connect">连接</button>
+            <span id="console"></span>
+        </div>
+    </div>
+</div>
+<script src="/chart.js"></script>
+</body>
+</html>
