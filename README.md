@@ -1,0 +1,2 @@
+# sys_load_server_for_orangepi
+监听整个系统的CPU和内存使用率及CPU温度
