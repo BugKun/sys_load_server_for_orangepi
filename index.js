@@ -6,9 +6,8 @@ var express = require("express"),
     os = require("os"),
     osUtils = require("os-utils"),
     path = require('path'),
-    shell = require("shelljs"),
+    fs = require("fs"),
     interval = -1,
-    currCPU = 0,
     cpuInfo = "CPU：" + os.cpus()[0].model.replace(/(^\s*)|(\s*$)/g, "") + " @" + os.cpus()[0].speed + "Mhz ×" + os.cpus().length;
 
 app.use(compress());
@@ -44,6 +43,54 @@ function Client(socket) {
     this.timeout = setTimeout(this.timeoutProc, 15000);
 }
 
+function getSysInfo(cb) {
+    var cpuUsage = null, memInfo = null;
+    function callback() {
+        if(cpuUsage && memInfo) cb(cpuUsage, memInfo);
+    }
+    function updateCPU(_cb) {
+        osUtils.cpuUsage(function (value) {
+            _cb(value);
+        });
+    }
+    updateCPU(function (_cpuUsage) {
+        cpuUsage = _cpuUsage * 100.0;
+        callback();
+    });
+    function getMemFree(_cb) {
+        require('child_process').exec('free', function(error, stdout, stderr) {
+            var lines = stdout.split("\n");
+            var memInfoTitle = lines[0].replace( /[\s\n\r]+/g,' ').split(/\s/);
+            var memInfoValue = lines[1].replace( /[\s\n\r]+/g,' ').split(/\s/);
+            memInfoTitle.shift();
+            memInfoValue.shift();
+            var memInfo = {};
+            for (var i in memInfoTitle){
+                memInfo[memInfoTitle[i]] = memInfoValue[i] * 1024;
+            }
+            _cb(memInfo);
+        });
+    }
+    getMemFree(function (_memInfo) {
+        memInfo = _memInfo;
+        callback();
+    });
+}
+
+function sysInfo() {
+    var totalMem = os.totalmem();
+    var temperature = Number(fs.readFileSync('/sys/class/thermal/thermal_zone0/temp','utf-8')) || 0;
+    getSysInfo(function (cpuUsage, memInfo) {
+        var freeMem = memInfo.available;
+        io.sockets.emit("sysInfo", {
+            cpuUsage,
+            freeMem,
+            totalMem,
+            temperature
+        });
+    });
+}
+
 io.sockets.on('connection', function (sockets) {//连接事件
     console.log('已连接' + io.eio.clientsCount + '个用户！');
     var client = new Client(sockets);
@@ -64,38 +111,8 @@ io.sockets.on('connection', function (sockets) {//连接事件
         io.sockets.emit("TokenAccess", true);
     }
     io.sockets.emit("cpuInfo", cpuInfo);
+    sysInfo();
     if (interval < 0) {
-        interval = setInterval(function () {
-            var freeMem = getMemFree().available;
-            var totalMem = os.totalmem();
-            var temperature = Number(shell.exec("cat /sys/class/thermal/thermal_zone0/temp", {silent: true}).stdout) || 0;
-            io.sockets.emit("cpuUpdate", {
-                cpuUsage: currCPU * 100.0,
-                freeMem,
-                totalMem,
-                temperature
-            });
-        }, 1000);//每隔1s取系统数据
+        interval = setInterval(sysInfo, 1000);//每隔1s取系统数据
     }
 });
-
-function updateCPU() {
-    osUtils.cpuUsage(function (value) {
-        currCPU = value;
-        updateCPU();
-    });
-}
-updateCPU();
-
-function getMemFree() {
-    var lines = shell.exec("free", {silent: true}).stdout.split("\n");
-    var memInfoTitle = lines[0].replace( /[\s\n\r]+/g,' ').split(/\s/);
-    var memInfoValue = lines[1].replace( /[\s\n\r]+/g,' ').split(/\s/);
-    memInfoTitle.shift();
-    memInfoValue.shift();
-    var memInfo = {};
-    for (var i in memInfoTitle){
-        memInfo[memInfoTitle[i]] = memInfoValue[i] * 1024;
-    }
-    return memInfo;
-}
