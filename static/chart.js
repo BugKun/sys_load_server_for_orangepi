@@ -207,7 +207,7 @@ function connectInit(token,connect,callback,handleErr) {
         socket.close();
         if(handleErr) handleErr(error);
     });
-    socket.on("cpuUpdate", function (update) {
+    socket.on("sysInfo", function (update) {
         var usedMem = update.totalMem - update.freeMem;
         update.displayTime = new Date().toLocaleTimeString();
         option.xAxis.data.push(update.displayTime);
@@ -332,4 +332,3 @@ document.getElementById('main').addEventListener("mousemove",function(){
 document.getElementById('main').addEventListener("mousedown",function(){
     storageChange.showTipPointer = null;
 });
-
